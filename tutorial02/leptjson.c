@@ -96,7 +96,7 @@ static int lept_parse_number(lept_context* c, lept_value* v) {
 		return LEPT_PARSE_INVALID_VALUE;
 	}
 	errno = 0;
-    v->n = strtod(c->json, NULL);
+    v->n = strtod(c->json, &end);
 	if (c->json == end)
 		return LEPT_PARSE_INVALID_VALUE;
 	if (errno == ERANGE && (v->n == HUGE_VAL || v->n == -HUGE_VAL))

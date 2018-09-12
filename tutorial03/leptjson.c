@@ -4,6 +4,8 @@
 #include <math.h>    /* HUGE_VAL */
 #include <stdlib.h>  /* NULL, malloc(), realloc(), free(), strtod() */
 #include <string.h>  /* memcpy() */
+#include <stdio.h>
+#include <ctype.h>
 
 #ifndef LEPT_PARSE_STACK_INIT_SIZE
 #define LEPT_PARSE_STACK_INIT_SIZE 256
@@ -94,6 +96,7 @@ static int lept_parse_string(lept_context* c, lept_value* v) {
     for (;;) {
         char ch = *p++;
         switch (ch) {
+			
             case '\"':
                 len = c->top - head;
                 lept_set_string(v, (const char*)lept_context_pop(c, len), len);
@@ -102,8 +105,49 @@ static int lept_parse_string(lept_context* c, lept_value* v) {
             case '\0':
                 c->top = head;
                 return LEPT_PARSE_MISS_QUOTATION_MARK;
+			case '\\':
+				switch (*p)
+				{
+				case 'n':
+					PUTC(c, '\n');
+					break;
+				case '\\':
+					PUTC(c, '\\');
+					break;
+				case '/':
+					PUTC(c, '\/');
+					break;
+				case 'b':
+					PUTC(c, '\b');
+					break;
+				case 'f':
+					PUTC(c, '\f');
+					break;
+				case 'r':
+					PUTC(c, '\r');
+					break;
+				case 't':
+					PUTC(c, '\t');
+					break;
+				case '"':
+					PUTC(c, '\"');
+					break;
+					
+				default:
+					return LEPT_PARSE_INVALID_STRING_ESCAPE;
+					break;
+				}
+				++p;
+				break;
+			
+
             default:
+				if ((ch >= '\x20' && ch <= '\x21')
+					|| (ch >= '\x23' && ch <= '\x5B')
+					|| ch >= '\x5D' )
                 PUTC(c, ch);
+				else
+					return LEPT_PARSE_INVALID_STRING_CHAR;
         }
     }
 }
@@ -154,11 +198,21 @@ lept_type lept_get_type(const lept_value* v) {
 
 int lept_get_boolean(const lept_value* v) {
     /* \TODO */
-    return 0;
+	assert(v != NULL && (v->type == LEPT_TRUE|| v->type == LEPT_FALSE));
+	if (v->type == LEPT_TRUE)
+		return 1;
+	else
+		return 0;
+
 }
 
 void lept_set_boolean(lept_value* v, int b) {
     /* \TODO */
+	assert(v != NULL);
+	if (b == 0)
+		v->type = LEPT_FALSE;
+	else
+		v->type = LEPT_TRUE;
 }
 
 double lept_get_number(const lept_value* v) {
@@ -168,6 +222,9 @@ double lept_get_number(const lept_value* v) {
 
 void lept_set_number(lept_value* v, double n) {
     /* \TODO */
+	assert(v != NULL);
+	v->u.n = n;
+	v->type = LEPT_NUMBER;
 }
 
 const char* lept_get_string(const lept_value* v) {
