@@ -183,10 +183,15 @@ static int lept_parse_string(lept_context* c, lept_value* v) {
 
 static int lept_parse_value(lept_context* c, lept_value* v);
 
+#define ARRAY_ERROR(ret) do { c->top = head; return ret; } while(0)
+
+
 static int lept_parse_array(lept_context* c, lept_value* v) {
+	size_t head = c->top;
     size_t size = 0;
     int ret;
     EXPECT(c, '[');
+	lept_parse_whitespace(c);
     if (*c->json == ']') {
         c->json++;
         v->type = LEPT_ARRAY;
@@ -195,12 +200,14 @@ static int lept_parse_array(lept_context* c, lept_value* v) {
         return LEPT_PARSE_OK;
     }
     for (;;) {
+		lept_parse_whitespace(c);
         lept_value e;
         lept_init(&e);
         if ((ret = lept_parse_value(c, &e)) != LEPT_PARSE_OK)
             return ret;
         memcpy(lept_context_push(c, sizeof(lept_value)), &e, sizeof(lept_value));
         size++;
+		lept_parse_whitespace(c);
         if (*c->json == ',')
             c->json++;
         else if (*c->json == ']') {
@@ -212,7 +219,7 @@ static int lept_parse_array(lept_context* c, lept_value* v) {
             return LEPT_PARSE_OK;
         }
         else
-            return LEPT_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
+			ARRAY_ERROR(LEPT_PARSE_MISS_COMMA_OR_SQUARE_BRACKET);
     }
 }
 
@@ -253,6 +260,14 @@ void lept_free(lept_value* v) {
     assert(v != NULL);
     if (v->type == LEPT_STRING)
         free(v->u.s.s);
+	if (v->type == LEPT_ARRAY) {
+		size_t i;
+		for (i = 0; i < v->u.a.size; ++i) {
+			lept_free(&v->u.a.e[i]);
+		}
+		free(v->u.a.e);
+	}
+
     v->type = LEPT_NULL;
 }
 
