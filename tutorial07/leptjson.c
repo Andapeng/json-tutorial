@@ -347,7 +347,7 @@ int lept_parse(lept_value* v, const char* json) {
 }
 
 
-
+#if 0
 static void lept_stringify_string(lept_context* c, const char* s, size_t len) {
     /* ... */
 	size_t i;
@@ -394,6 +394,59 @@ static void lept_stringify_string(lept_context* c, const char* s, size_t len) {
 	}
 	PUTS(c, "\"", 1);
 }
+#else
+static void lept_stringify_string(lept_context* c, const char* s, size_t len) {
+	/* ... */
+	size_t i, size;
+	static const char hexdigits[] = { '0', '1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+	char* p, *head;
+	p = head = lept_context_push(c, size = len * 6+2);
+	assert(s != NULL);
+	*p++ = '\"';
+	for (i = 0; i < len; ++i) {
+		char ch = s[i];
+		switch (ch)
+		{
+		case '\n':
+			*p++ = '\\'; *p++ = 'n';
+			break;
+		case '\b':
+			*p++ = '\\'; *p++ = 'b';
+			break;
+		case '\f':
+			*p++ = '\\'; *p++ = 'f';
+			break;
+		case '\r':
+			*p++ = '\\'; *p++ = 'r';
+			break;
+		case '\t':
+			*p++ = '\\'; *p++ = 't';
+			break;
+		case '\\':
+			*p++ = '\\'; *p++ = '\\';
+			break;
+		case '\"':
+			*p++ = '\\'; *p++ = '\"';
+			break;
+		default:
+			if (s[i] < 0x20) {
+				
+				*p++ = '\\'; *p++ = 'u'; *p++ = '0'; *p++ = '0';
+				*p++ = hexdigits[ch >> 4];
+				*p++ = hexdigits[ch & 15];
+			}
+			else {
+				*p++ = ch;
+			}
+
+
+			break;
+		}
+	}
+	*p++ = '\"';
+	c->top -= size - (p - head);
+}
+#endif
 
 static void lept_stringify_value(lept_context* c, const lept_value* v) {
 	size_t i;
